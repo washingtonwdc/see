@@ -1,10 +1,11 @@
 import { Search, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ElementType } from "react";
 
 interface EmptyStateProps {
   title: string;
   description: string;
-  icon?: "search" | "inbox";
+  icon?: "search" | "inbox" | ElementType;
   actionLabel?: string;
   onAction?: () => void;
 }
@@ -16,7 +17,14 @@ export function EmptyState({
   actionLabel,
   onAction,
 }: EmptyStateProps) {
-  const Icon = icon === "search" ? Search : Inbox;
+  let Icon: ElementType;
+  if (icon === "search") {
+    Icon = Search;
+  } else if (icon === "inbox") {
+    Icon = Inbox;
+  } else {
+    Icon = icon;
+  }
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center" data-testid="empty-state">

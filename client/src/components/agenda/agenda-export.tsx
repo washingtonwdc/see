@@ -115,8 +115,8 @@ export function AgendaExport({ items, filteredItems, onImport }: AgendaExportPro
                             categoria: raw.categoria ? sanitizeString(String(raw.categoria)) : undefined,
                         };
                         toImport.push(i);
-                    } catch (itemErr: any) {
-                        errors.push(`Item ${idx + 1}: ${itemErr?.message || "erro desconhecido"}`);
+                    } catch (itemErr: unknown) {
+                        errors.push(`Item ${idx + 1}: ${itemErr instanceof Error ? itemErr.message : String(itemErr)}`);
                     }
                 }
 
@@ -133,10 +133,10 @@ export function AgendaExport({ items, filteredItems, onImport }: AgendaExportPro
                     description: message + errorMsg,
                     variant: errors.length > 0 ? "destructive" : "default"
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
                 toast({
                     title: "Falha ao importar JSON",
-                    description: String(err?.message || err),
+                    description: err instanceof Error ? err.message : String(err),
                     variant: "destructive"
                 });
             } finally {
@@ -219,8 +219,8 @@ export function AgendaExport({ items, filteredItems, onImport }: AgendaExportPro
                         const categoria = r.categoria ? sanitizeString(r.categoria) : undefined;
 
                         toImport.push({ id, titulo, data, hora, notas, criadoEm, concluido, duracao, categoria });
-                    } catch (itemErr: any) {
-                        errors.push(`Linha ${idx + 2}: ${itemErr?.message || "erro desconhecido"}`);
+                    } catch (itemErr: unknown) {
+                        errors.push(`Linha ${idx + 2}: ${itemErr instanceof Error ? itemErr.message : String(itemErr)}`);
                     }
                 }
 
@@ -237,10 +237,10 @@ export function AgendaExport({ items, filteredItems, onImport }: AgendaExportPro
                     description: message + errorMsg,
                     variant: errors.length > 0 ? "destructive" : "default"
                 });
-            } catch (err: any) {
+            } catch (err: unknown) {
                 toast({
                     title: "Falha ao importar CSV",
-                    description: String(err?.message || err),
+                    description: err instanceof Error ? err.message : String(err),
                     variant: "destructive"
                 });
             } finally {

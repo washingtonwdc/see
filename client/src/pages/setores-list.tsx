@@ -54,10 +54,10 @@ export default function SetoresList() {
 
   // Build query parameters for backend search
   const hasFilters = searchQuery || selectedBloco !== "all" || selectedAndar !== "all";
-  
+
   const queryParams = useMemo(() => {
     if (!hasFilters) return undefined;
-    
+
     const params: Record<string, string> = {};
     if (searchQuery) params.query = searchQuery;
     if (selectedBloco !== "all") params.bloco = selectedBloco;
@@ -67,8 +67,8 @@ export default function SetoresList() {
 
   // Fetch filtered or all setores from backend (different query key)
   const { data: displaySetores, isLoading } = useQuery<Setor[]>({
-    queryKey: hasFilters 
-      ? ["/api/setores", queryParams] 
+    queryKey: hasFilters
+      ? ["/api/setores", queryParams]
       : ["/api/setores"],
   });
 
@@ -113,8 +113,8 @@ export default function SetoresList() {
         toast({ title: "Setores importados", description: "Dados carregados com sucesso" });
         // Force refetch
         window.location.reload();
-      } catch (e: any) {
-        toast({ title: "Falha ao importar JSON", description: e?.message || String(e), variant: "destructive" });
+      } catch (e: unknown) {
+        toast({ title: "Falha ao importar JSON", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
       }
     };
     input.click();
@@ -137,8 +137,8 @@ export default function SetoresList() {
         if (!resp.ok) throw new Error(await resp.text());
         toast({ title: "Setores importados", description: "CSV carregado com sucesso" });
         window.location.reload();
-      } catch (e: any) {
-        toast({ title: "Falha ao importar CSV", description: e?.message || String(e), variant: "destructive" });
+      } catch (e: unknown) {
+        toast({ title: "Falha ao importar CSV", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
       }
     };
     input.click();
@@ -164,8 +164,8 @@ export default function SetoresList() {
       const filename = `setores_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
       downloadFile(blob, filename);
       toast({ title: "Exportado", description: "JSON baixado" });
-    } catch (e: any) {
-      toast({ title: "Falha ao exportar JSON", description: e?.message || String(e), variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Falha ao exportar JSON", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     }
   };
 
@@ -178,8 +178,8 @@ export default function SetoresList() {
       const filename = `setores_${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
       downloadFile(blob, filename);
       toast({ title: "Exportado", description: "CSV baixado" });
-    } catch (e: any) {
-      toast({ title: "Falha ao exportar CSV", description: e?.message || String(e), variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Falha ao exportar CSV", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     }
   };
 
@@ -200,187 +200,187 @@ export default function SetoresList() {
       queryClient.invalidateQueries({ queryKey: ["/api/setores"] });
       navigate(`/setor/${newSetor.slug}`);
     },
-    onError: (e: any) => {
-      toast({ title: "Falha ao criar setor", description: e?.message || String(e), variant: "destructive" });
+    onError: (e: Error) => {
+      toast({ title: "Falha ao criar setor", description: e.message, variant: "destructive" });
     },
   });
 
   return (
     <>
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2" data-testid="text-page-title">Buscar Setores</h1>
-          <p className="text-muted-foreground">
-            Encontre setores por nome, sigla, bloco, andar ou responsável
-          </p>
-        </div>
+      <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2" data-testid="text-page-title">Buscar Setores</h1>
+            <p className="text-muted-foreground">
+              Encontre setores por nome, sigla, bloco, andar ou responsável
+            </p>
+          </div>
 
-        {/* Search and Filters */}
-        <div className="mb-8 space-y-4">
-          <SearchBar value={searchQuery} onChange={setSearchQuery} />
-          
-          <div className="flex items-center gap-4 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              data-testid="button-toggle-filters"
-            >
-              <Filter className="mr-2 h-4 w-4" />
-              Filtros
-              {activeFiltersCount > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {activeFiltersCount}
-                </Badge>
-              )}
-            </Button>
+          {/* Search and Filters */}
+          <div className="mb-8 space-y-4">
+            <SearchBar value={searchQuery} onChange={setSearchQuery} />
 
-            {activeFiltersCount > 0 && (
+            <div className="flex items-center gap-4 flex-wrap">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={clearFilters}
-                data-testid="button-clear-filters"
+                onClick={() => setShowFilters(!showFilters)}
+                data-testid="button-toggle-filters"
               >
-                Limpar filtros
+                <Filter className="mr-2 h-4 w-4" />
+                Filtros
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
               </Button>
+
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  data-testid="button-clear-filters"
+                >
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+
+            {showFilters && (
+              <Card>
+                <CardContent className="p-6">
+                  {filtersError && (
+                    <div className="mb-4 flex items-center gap-2 text-sm text-destructive" data-testid="text-filters-error">
+                      <AlertCircle className="h-4 w-4" />
+                      Falha ao carregar opções de filtros. Tente novamente mais tarde.
+                    </div>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Bloco</label>
+                      <Select value={selectedBloco} onValueChange={setSelectedBloco}>
+                        <SelectTrigger data-testid="select-bloco" disabled={filtersLoading || filtersError}>
+                          <SelectValue placeholder={blocosLoading ? "Carregando..." : "Todos os blocos"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os blocos</SelectItem>
+                          {blocos.map(bloco => (
+                            <SelectItem key={bloco} value={bloco}>
+                              {bloco}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Andar</label>
+                      <Select value={selectedAndar} onValueChange={setSelectedAndar}>
+                        <SelectTrigger data-testid="select-andar" disabled={filtersLoading || filtersError}>
+                          <SelectValue placeholder={andaresLoading ? "Carregando..." : "Todos os andares"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os andares</SelectItem>
+                          {andares.map(andar => (
+                            <SelectItem key={andar} value={andar}>
+                              {andar}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
 
-          {showFilters && (
-            <Card>
-              <CardContent className="p-6">
-                {filtersError && (
-                  <div className="mb-4 flex items-center gap-2 text-sm text-destructive" data-testid="text-filters-error">
-                    <AlertCircle className="h-4 w-4" />
-                    Falha ao carregar opções de filtros. Tente novamente mais tarde.
-                  </div>
-                )}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Bloco</label>
-                    <Select value={selectedBloco} onValueChange={setSelectedBloco}>
-                      <SelectTrigger data-testid="select-bloco" disabled={filtersLoading || filtersError}>
-                        <SelectValue placeholder={blocosLoading ? "Carregando..." : "Todos os blocos"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os blocos</SelectItem>
-                        {blocos.map(bloco => (
-                          <SelectItem key={bloco} value={bloco}>
-                            {bloco}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Andar</label>
-                    <Select value={selectedAndar} onValueChange={setSelectedAndar}>
-                      <SelectTrigger data-testid="select-andar" disabled={filtersLoading || filtersError}>
-                        <SelectValue placeholder={andaresLoading ? "Carregando..." : "Todos os andares"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os andares</SelectItem>
-                        {andares.map(andar => (
-                          <SelectItem key={andar} value={andar}>
-                            {andar}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+          {/* Results */}
+          {isLoading ? (
+            <LoadingState />
+          ) : displaySetores && displaySetores.length > 0 ? (
+            <>
+              {adminOpen && (
+                <div className="mb-4 flex items-center gap-2 flex-wrap">
+                  <Button variant="secondary" size="sm" onClick={async () => { const ok = await requireAdmin(); if (!ok) return; await handleImportJSON(); }}>Importar JSON</Button>
+                  <Button variant="secondary" size="sm" onClick={async () => { const ok = await requireAdmin(); if (!ok) return; await handleImportCSV(); }}>Importar CSV</Button>
+                  <Button variant="outline" size="sm" onClick={async () => { const ok = await requireAdmin(); if (!ok) return; await handleExportJSON(); }}>Exportar JSON</Button>
+                  <Button variant="outline" size="sm" onClick={async () => { const ok = await requireAdmin(); if (!ok) return; await handleExportCSV(); }}>Exportar CSV</Button>
+                  <Button variant="default" size="sm" onClick={async () => { const ok = await requireAdmin(); if (!ok) return; setIsCreating(true); }}>Novo Setor</Button>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground" data-testid="text-results-count">
+                  {displaySetores.length} {displaySetores.length === 1 ? 'setor encontrado' : 'setores encontrados'}
+                </p>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {displaySetores.map(setor => (
+                  <SetorCard key={setor.id} setor={setor} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <EmptyState
+              icon="search"
+              title="Nenhum setor encontrado"
+              description="Tente ajustar os filtros ou buscar por outros termos."
+              actionLabel={activeFiltersCount > 0 || searchQuery ? "Limpar filtros" : undefined}
+              onAction={activeFiltersCount > 0 || searchQuery ? clearFilters : undefined}
+            />
           )}
         </div>
-
-        {/* Results */}
-        {isLoading ? (
-          <LoadingState />
-        ) : displaySetores && displaySetores.length > 0 ? (
-          <>
-            {adminOpen && (
-              <div className="mb-4 flex items-center gap-2 flex-wrap">
-                <Button variant="secondary" size="sm" onClick={async ()=>{ const ok = await requireAdmin(); if (!ok) return; await handleImportJSON(); }}>Importar JSON</Button>
-                <Button variant="secondary" size="sm" onClick={async ()=>{ const ok = await requireAdmin(); if (!ok) return; await handleImportCSV(); }}>Importar CSV</Button>
-                <Button variant="outline" size="sm" onClick={async ()=>{ const ok = await requireAdmin(); if (!ok) return; await handleExportJSON(); }}>Exportar JSON</Button>
-                <Button variant="outline" size="sm" onClick={async ()=>{ const ok = await requireAdmin(); if (!ok) return; await handleExportCSV(); }}>Exportar CSV</Button>
-                <Button variant="default" size="sm" onClick={async () => { const ok = await requireAdmin(); if (!ok) return; setIsCreating(true); }}>Novo Setor</Button>
-              </div>
-            )}
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground" data-testid="text-results-count">
-                {displaySetores.length} {displaySetores.length === 1 ? 'setor encontrado' : 'setores encontrados'}
-              </p>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {displaySetores.map(setor => (
-                <SetorCard key={setor.id} setor={setor} />
-              ))}
-            </div>
-          </>
-        ) : (
-          <EmptyState
-            icon="search"
-            title="Nenhum setor encontrado"
-            description="Tente ajustar os filtros ou buscar por outros termos."
-            actionLabel={activeFiltersCount > 0 || searchQuery ? "Limpar filtros" : undefined}
-            onAction={activeFiltersCount > 0 || searchQuery ? clearFilters : undefined}
-          />
-        )}
       </div>
-    </div>
 
-    {/* Create Setor Dialog */}
-    <Dialog open={isCreating} onOpenChange={setIsCreating}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Novo Setor</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-sm text-muted-foreground" htmlFor="novo-nome">Nome</label>
-              <Input id="novo-nome" value={createForm.nome} onChange={(e)=>setCreateForm({ ...createForm, nome: e.target.value })} />
+      {/* Create Setor Dialog */}
+      <Dialog open={isCreating} onOpenChange={setIsCreating}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Setor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm text-muted-foreground" htmlFor="novo-nome">Nome</label>
+                <Input id="novo-nome" value={createForm.nome} onChange={(e) => setCreateForm({ ...createForm, nome: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground" htmlFor="novo-sigla">Sigla</label>
+                <Input id="novo-sigla" value={createForm.sigla} onChange={(e) => setCreateForm({ ...createForm, sigla: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm text-muted-foreground" htmlFor="novo-bloco">Bloco</label>
+                <Input id="novo-bloco" value={createForm.bloco} onChange={(e) => setCreateForm({ ...createForm, bloco: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground" htmlFor="novo-andar">Andar</label>
+                <Input id="novo-andar" value={createForm.andar} onChange={(e) => setCreateForm({ ...createForm, andar: e.target.value })} />
+              </div>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground" htmlFor="novo-sigla">Sigla</label>
-              <Input id="novo-sigla" value={createForm.sigla} onChange={(e)=>setCreateForm({ ...createForm, sigla: e.target.value })} />
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-sm text-muted-foreground" htmlFor="novo-bloco">Bloco</label>
-              <Input id="novo-bloco" value={createForm.bloco} onChange={(e)=>setCreateForm({ ...createForm, bloco: e.target.value })} />
+              <label className="text-sm text-muted-foreground" htmlFor="novo-email">E-mail</label>
+              <Input id="novo-email" type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground" htmlFor="novo-andar">Andar</label>
-              <Input id="novo-andar" value={createForm.andar} onChange={(e)=>setCreateForm({ ...createForm, andar: e.target.value })} />
+              <label className="text-sm text-muted-foreground" htmlFor="novo-observacoes">Observações</label>
+              <Input id="novo-observacoes" value={createForm.observacoes} onChange={(e) => setCreateForm({ ...createForm, observacoes: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground" htmlFor="novo-ramal">Ramal principal</label>
+              <Input id="novo-ramal" value={createForm.ramal_principal} onChange={(e) => setCreateForm({ ...createForm, ramal_principal: e.target.value })} />
             </div>
           </div>
-          <div>
-            <label className="text-sm text-muted-foreground" htmlFor="novo-email">E-mail</label>
-            <Input id="novo-email" type="email" value={createForm.email} onChange={(e)=>setCreateForm({ ...createForm, email: e.target.value })} />
-          </div>
-          <div>
-            <label className="text-sm text-muted-foreground" htmlFor="novo-observacoes">Observações</label>
-            <Input id="novo-observacoes" value={createForm.observacoes} onChange={(e)=>setCreateForm({ ...createForm, observacoes: e.target.value })} />
-          </div>
-          <div>
-            <label className="text-sm text-muted-foreground" htmlFor="novo-ramal">Ramal principal</label>
-            <Input id="novo-ramal" value={createForm.ramal_principal} onChange={(e)=>setCreateForm({ ...createForm, ramal_principal: e.target.value })} />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={()=>setIsCreating(false)}>Cancelar</Button>
-          <Button onClick={async ()=>{ const ok = await requireAdmin(); if (!ok) return; createMutation.mutate(); }} disabled={createMutation.isPending || !createForm.nome || !createForm.sigla}>Criar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsCreating(false)}>Cancelar</Button>
+            <Button onClick={async () => { const ok = await requireAdmin(); if (!ok) return; createMutation.mutate(); }} disabled={createMutation.isPending || !createForm.nome || !createForm.sigla}>Criar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
