@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePhoneDirectory, DirectoryEntry } from "@/hooks/use-phone-directory";
 import { DirectoryFilters } from "@/components/phone-directory/directory-filters";
@@ -8,6 +8,9 @@ import { DirectoryDialogs } from "@/components/phone-directory/directory-dialogs
 import { EmptyState } from "@/components/empty-state";
 import { Building2 } from "lucide-react";
 import { Footer } from "@/components/footer";
+import { ContactShareButtons } from "@/components/contact-share-buttons"; // new
+import QRCode from "qrcode.react"; // QR code component
+import { toast } from "@/hooks/use-toast"; // toast for copy feedback
 
 export default function ListaTelefonica() {
   const {
@@ -55,6 +58,20 @@ export default function ListaTelefonica() {
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<{ slug: string; ramal: string; setorNome: string } | null>(null);
   const [editPhone, setEditPhone] = useState("");
+  const [selectedEntry, setSelectedEntry] = useState<DirectoryEntry | null>(null); // State for selected entry for share/QR
+
+  // Keyboard shortcut: focus search when Ctrl+K pressed
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "k") {
+        const searchInput = document.getElementById("search-setor");
+        searchInput?.focus();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const handleExportCSV = (data: DirectoryEntry[]) => {
     const csvContent = [
@@ -102,6 +119,15 @@ export default function ListaTelefonica() {
     }
   };
 
+  const handleCopyPhone = (entry: DirectoryEntry) => {
+    navigator.clipboard.writeText(entry.telefone);
+    toast({
+      title: "Copiado!",
+      description: `${entry.setor} – ${entry.telefone} copiado para a área de transferência.`,
+      variant: "success",
+    });
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-[1600px]">
       <div className="flex flex-col gap-6">
@@ -112,14 +138,32 @@ export default function ListaTelefonica() {
               Encontre ramais, telefones e e-mails dos setores.
             </p>
           </div>
-          <DirectoryActions
-            filteredEntries={filteredAndSortedEntries}
-            currentEntries={currentEntries}
-            onExportCSV={handleExportCSV}
-            onAddContact={() => setAddOpen(true)}
-            adminOpen={adminOpen}
-            requireAdmin={requireAdmin}
-          />
+          <div className="flex items-center gap-4">
+            {/* Quick‑win: Share & QR */}
+            {selectedEntry && (
+              <div className="flex items-center gap-2">
+                <ContactShareButtons
+                  nome={selectedEntry.nome}
+                  telefone={selectedEntry.telefone}
+                  email={selectedEntry.email}
+                />
+                <QRCode
+                  value={selectedEntry.telefone}
+                  size={96}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+            )}
+            <DirectoryActions
+              filteredEntries={filteredAndSortedEntries}
+              currentEntries={currentEntries}
+              onExportCSV={handleExportCSV}
+              onAddContact={() => setAddOpen(true)}
+              adminOpen={adminOpen}
+              requireAdmin={requireAdmin}
+            />
+          </div>
         </div>
 
         <Card>
@@ -145,6 +189,7 @@ export default function ListaTelefonica() {
               onSelectedResponsavelChange={setSelectedResponsavel}
               selectedEmail={selectedEmail}
               onSelectedEmailChange={setSelectedEmail}
+              searchInputId="search-setor" // Added ID for keyboard shortcut
             />
 
             {isLoading ? (
