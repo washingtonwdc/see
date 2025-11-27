@@ -7,6 +7,7 @@ import { DirectoryActions } from "@/components/phone-directory/directory-actions
 import { DirectoryDialogs } from "@/components/phone-directory/directory-dialogs";
 import { EmptyState } from "@/components/empty-state";
 import { Building2 } from "lucide-react";
+import { Footer } from "@/components/footer";
 
 export default function ListaTelefonica() {
   const {
@@ -198,6 +199,7 @@ export default function ListaTelefonica() {
         onAdd={handleAddContact}
         onSaveEdit={handleSaveEdit}
       />
+      <Footer />
     </div>
   );
 }

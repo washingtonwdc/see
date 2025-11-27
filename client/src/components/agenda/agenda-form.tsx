@@ -67,7 +67,7 @@ export function AgendaForm({ onAdd }: AgendaFormProps) {
 
     return (
         <Card className="mb-8">
-            <CardContent className="p-6 grid gap-4 grid-cols-1">
+            <CardContent className="p-4 grid gap-4 grid-cols-1">
                 <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="titulo">Título</label>
                     <Input id="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Reunião, visita técnica, etc." />

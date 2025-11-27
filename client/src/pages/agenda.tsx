@@ -5,6 +5,7 @@ import { AgendaFilters } from "@/components/agenda/agenda-filters";
 import { AgendaExport } from "@/components/agenda/agenda-export";
 import { EditAgendaDialog } from "@/components/agenda/edit-agenda-dialog";
 import { useAgenda, AgendaItem } from "@/hooks/use-agenda";
+import { Footer } from "@/components/footer";
 
 export default function AgendaPage() {
   const {
@@ -114,7 +115,7 @@ export default function AgendaPage() {
           <p className="text-muted-foreground text-lg">Gerencie seus compromissos e tarefas de forma eficiente.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           {/* Left Column: Tools (Form, Filters, Export) */}
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
             <div className="bg-card rounded-xl border shadow-sm p-4 space-y-6">
@@ -173,6 +174,7 @@ export default function AgendaPage() {
           onSave={updateItem}
         />
       </div>
+      <Footer />
     </div>
   );
 }

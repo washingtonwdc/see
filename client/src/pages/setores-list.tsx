@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Setor } from "@shared/schema";
 import { toast } from "@/hooks/use-toast";
 import { useAdmin } from "@/components/admin-provider";
+import { Footer } from "@/components/footer";
 
 export default function SetoresList() {
   const { adminOpen, requireAdmin } = useAdmin();
@@ -381,6 +382,7 @@ export default function SetoresList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Footer />
     </>
   );
 }
