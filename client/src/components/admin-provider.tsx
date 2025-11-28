@@ -36,7 +36,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       setAdminOpen(true);
       setDialogOpen(false);
-      const ms = typeof data?.unlock_ms === "number" ? data.unlock_ms : 300000;
+      const ms = typeof data?.unlock_ms === "number" ? data.unlock_ms : 600000;
       setTimeout(() => setAdminOpen(false), ms);
       setUnlockUntil(Date.now() + ms);
       setRemainingMs(ms);

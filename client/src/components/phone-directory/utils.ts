@@ -15,3 +15,12 @@ export function isValidEmail(value: string) {
     if (!v) return true;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
+
+export function isMobilePhoneBR(value: string) {
+    const d = sanitizeDigits(value || "");
+    if (d.startsWith("55") && d.length >= 13) {
+        const local = d.slice(2);
+        return local.length >= 11 && local[2] === "9";
+    }
+    return d.length === 11 && d[2] === "9";
+}

@@ -95,7 +95,7 @@ export function EditContactDialog({ open, onOpenChange, target, initialPhone, on
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <label className="text-sm font-medium">Setor</label>
+                        <label className="text-sm font-medium">Responsável</label>
                         <div className="text-sm text-muted-foreground">{target?.setorNome}</div>
                     </div>
                     <div className="grid gap-2">

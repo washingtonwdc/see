@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Filter, AlertCircle } from "lucide-react";
@@ -43,6 +43,19 @@ export default function SetoresList() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
 
+  // Initialize filters from URL query parameters
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qb = params.get("bloco");
+      const qa = params.get("andar");
+      const qq = params.get("query");
+      if (qb) setSelectedBloco(qb);
+      if (qa) setSelectedAndar(qa);
+      if (qq) setSearchQuery(qq);
+    } catch {}
+  }, []);
+
   // Fetch filter options from dedicated endpoints
   const { data: blocosList, isLoading: blocosLoading, isError: blocosError } = useQuery<string[]>({
     queryKey: ["/api/blocos"],
@@ -72,6 +85,17 @@ export default function SetoresList() {
       ? ["/api/setores", queryParams]
       : ["/api/setores"],
   });
+
+  // Optional: keep URL in sync with current filters for sharable links
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("query", searchQuery);
+    if (selectedBloco !== "all") params.set("bloco", selectedBloco);
+    if (selectedAndar !== "all") params.set("andar", selectedAndar);
+    const qs = params.toString();
+    navigate(qs ? `/setores?${qs}` : "/setores");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, selectedBloco, selectedAndar]);
 
   // Use backend-provided filter lists, fallback to empty arrays
   const blocos = useMemo(() => {

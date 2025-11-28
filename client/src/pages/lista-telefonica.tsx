@@ -7,6 +7,7 @@ import { DirectoryActions } from "@/components/phone-directory/directory-actions
 import { DirectoryDialogs } from "@/components/phone-directory/directory-dialogs";
 import { EmptyState } from "@/components/empty-state";
 import { Building2 } from "lucide-react";
+import { isMobilePhoneBR } from "@/components/phone-directory/utils";
 import { Footer } from "@/components/footer";
 import { ContactShareButtons } from "@/components/contact-share-buttons"; // new
 import { QRCodeCanvas } from "qrcode.react"; // QR code component
@@ -89,21 +90,39 @@ export default function ListaTelefonica() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const k = e.key.toLowerCase();
+      if (k === "/") {
+        e.preventDefault();
+        const searchInput = document.getElementById("search-setor");
+        searchInput?.focus();
+      } else if (k === "f") {
+        setFavoritesFirst(v => !v);
+      } else if (k === "o") {
+        setFavoritesOnly(v => !v);
+      } else if (k === "a") {
+        setAccessFirst(v => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setFavoritesFirst, setFavoritesOnly, setAccessFirst]);
+
   const handleExportCSV = (data: DirectoryEntry[]) => {
     const csvContent = [
-      ["Setor", "Sigla", "Bloco", "Andar", "Ramal", "Telefone", "Email", "Responsável"],
+      ["Responsável", "Setor", "Sigla", "Bloco", "Andar", "Telefone", "Email"],
       ...data.map(e => {
         const setor = setores?.find(s => s.slug === e.slug);
-        const resp = setor?.responsaveis?.map(r => r.nome).join(", ") || "";
         return [
           `"${e.setor}"`,
+          `"${setor?.nome || ""}"`,
           `"${e.sigla}"`,
           `"${e.bloco}"`,
           `"${e.andar}"`,
-          `"${e.ramal}"`,
-          `"${e.telefone}"`,
-          `"${e.email}"`,
-          `"${resp}"`
+          `"${(!adminOpen && isMobilePhoneBR(e.telefone)) ? "Somente Admin" : e.telefone}"`,
+          `"${e.email}"`
         ];
       })
     ].map(e => e.join(",")).join("\n");
@@ -140,7 +159,7 @@ export default function ListaTelefonica() {
     toast({
       title: "Copiado!",
       description: `${entry.setor} – ${entry.telefone} copiado para a área de transferência.`,
-      variant: "success",
+      variant: "default",
     });
   };
 
@@ -151,7 +170,7 @@ export default function ListaTelefonica() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Lista Telefônica</h1>
             <p className="text-muted-foreground mt-1">
-              Encontre ramais, telefones e e-mails dos setores.
+              Encontre ramais, telefones e e-mails dos responsáveis.
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -159,7 +178,7 @@ export default function ListaTelefonica() {
             {selectedEntry && (
               <div className="flex items-center gap-2">
                 <ContactShareButtons
-                  nome={selectedEntry.nome}
+                  nome={selectedEntry.setor}
                   telefone={selectedEntry.telefone}
                   email={selectedEntry.email}
                 />
@@ -183,11 +202,17 @@ export default function ListaTelefonica() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Diretório de Contatos
-            </CardTitle>
+          <CardHeader className="p-6">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Diretório de Contatos
+              </CardTitle>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span>Total: {filteredAndSortedEntries.length}</span>
+                <span>Página: {page}/{totalPages}</span>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <DirectoryFilters
@@ -205,7 +230,13 @@ export default function ListaTelefonica() {
               onSelectedResponsavelChange={setSelectedResponsavel}
               selectedEmail={selectedEmail}
               onSelectedEmailChange={setSelectedEmail}
-              searchInputId="search-setor" // Added ID for keyboard shortcut
+              favoritesFirst={favoritesFirst}
+              onFavoritesFirstChange={setFavoritesFirst}
+              favoritesOnly={favoritesOnly}
+              onFavoritesOnlyChange={setFavoritesOnly}
+              accessFirst={accessFirst}
+              onAccessFirstChange={setAccessFirst}
+              adminOpen={adminOpen}
             />
 
             {isLoading ? (
@@ -243,6 +274,7 @@ export default function ListaTelefonica() {
                 onEdit={handleEditContact}
                 onRemove={handleRemoveContact}
                 adminOpen={adminOpen}
+                onRequireAdmin={requireAdmin}
               />
             )}
           </CardContent>

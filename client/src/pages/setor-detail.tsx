@@ -60,7 +60,7 @@ export default function SetorDetail() {
     outros_contatos: [],
   });
 
-  const { requireAdmin } = useAdmin();
+  const { adminOpen, requireAdmin } = useAdmin();
 
   const { data: setor, isLoading } = useQuery<Setor>({
     queryKey: ["/api/setores", slug],
@@ -253,13 +253,23 @@ export default function SetorDetail() {
           {setor?.bloco && (
             <>
               <ChevronRight className="h-4 w-4" />
-              <span className="hover:text-foreground transition-colors">{setor.bloco}</span>
+              <Link href={`/setores?bloco=${encodeURIComponent(setor.bloco)}`} className="hover:text-foreground transition-colors">
+                {`Bloco ${setor.bloco}`}
+              </Link>
             </>
           )}
           {setor?.andar && (
             <>
               <ChevronRight className="h-4 w-4" />
-              <span className="hover:text-foreground transition-colors">{setor.andar}</span>
+              <Link
+                href={`/setores?${[
+                  setor?.bloco ? `bloco=${encodeURIComponent(setor.bloco)}` : "",
+                  `andar=${encodeURIComponent(setor.andar)}`,
+                ].filter(Boolean).join("&")}`}
+                className="hover:text-foreground transition-colors"
+              >
+                {`Andar ${setor.andar}`}
+              </Link>
             </>
           )}
           <ChevronRight className="h-4 w-4" />
@@ -291,10 +301,10 @@ export default function SetorDetail() {
                     {setor.sigla}
                   </Badge>
                   {setor.bloco && (
-                    <Badge variant="outline">{setor.bloco}</Badge>
+                    <Badge variant="outline">{`Bloco ${setor.bloco}`}</Badge>
                   )}
                   {setor.andar && (
-                    <Badge variant="outline">{setor.andar}</Badge>
+                    <Badge variant="outline">{`Andar ${setor.andar}`}</Badge>
                   )}
                 </div>
                 <CardTitle className="text-2xl" data-testid="text-nome">
@@ -386,7 +396,7 @@ export default function SetorDetail() {
             </Card>
 
             {/* Responsáveis Card */}
-            {setor.responsaveis && setor.responsaveis.length > 0 && (
+            {setor.responsaveis && setor.responsaveis.some(r => String(r.nome || "").trim().length > 0) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -396,16 +406,21 @@ export default function SetorDetail() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {setor.responsaveis.map((resp, idx) => (
+                    {setor.responsaveis.filter(r => String(r.nome || "").trim().length > 0).map((resp, idx) => (
                       <div key={idx} className="flex items-center gap-3">
                         <Avatar>
                           <AvatarFallback className="bg-primary/10 text-primary">
-                            {getInitials(resp.nome)}
+                          {getInitials(resp.nome)}
                           </AvatarFallback>
                         </Avatar>
-                        <p className="font-medium" data-testid={`text-responsavel-${idx}`}>
-                          {resp.nome}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium" data-testid={`text-responsavel-${idx}`}>
+                            {adminOpen ? resp.nome : "Somente Admin"}
+                          </p>
+                          {!adminOpen && (
+                            <Button variant="ghost" size="sm" className="h-6" onClick={() => requireAdmin()}>Desbloquear</Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -420,19 +435,27 @@ export default function SetorDetail() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Contatos</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => {
-                    setIsEditing(true);
-                    // Add a blank telefone input if none is blank
-                    setForm((prev) => {
-                      const hasBlank = prev.telefones.some(t => !t.numero);
-                      return hasBlank ? prev : { ...prev, telefones: [...prev.telefones, { numero: "", link: "", ramal_original: "" }] };
-                    });
-                  }} data-testid="button-criar-contato">
-                    Criar Contato
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} data-testid="button-editar-contatos">
-                    Editar
-                  </Button>
+                  {adminOpen ? (
+                    <>
+                      <Button variant="secondary" size="sm" onClick={() => {
+                        setIsEditing(true);
+                        setForm((prev) => {
+                          const hasBlank = prev.telefones.some(t => !t.numero);
+                          return hasBlank ? prev : { ...prev, telefones: [...prev.telefones, { numero: "", link: "", ramal_original: "" }] };
+                        });
+                      }} data-testid="button-criar-contato">
+                        Criar Contato
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} data-testid="button-editar-contatos">
+                        Editar
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" disabled>Somente Admin</Button>
+                      <Button variant="ghost" size="sm" className="h-9" onClick={() => requireAdmin()}>Desbloquear</Button>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -526,18 +549,25 @@ export default function SetorDetail() {
                     <Separator />
                     <div className="space-y-3">
                       <p className="text-sm font-medium text-muted-foreground">WhatsApp</p>
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="w-full justify-start text-green-600 hover:text-green-700"
-                        data-testid="button-whatsapp"
-                      >
-                        <a href={setor.whatsapp} target="_blank" rel="noopener noreferrer">
-                          <SiWhatsapp className="mr-2 h-4 w-4" />
-                          Abrir WhatsApp
-                          <ExternalLink className="ml-auto h-4 w-4" />
-                        </a>
-                      </Button>
+                      {adminOpen ? (
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="w-full justify-start text-green-600 hover:text-green-700"
+                          data-testid="button-whatsapp"
+                        >
+                          <a href={setor.whatsapp} target="_blank" rel="noopener noreferrer">
+                            <SiWhatsapp className="mr-2 h-4 w-4" />
+                            Abrir WhatsApp
+                            <ExternalLink className="ml-auto h-4 w-4" />
+                          </a>
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" className="w-full justify-start" disabled>Somente Admin</Button>
+                          <Button variant="ghost" size="sm" className="h-9" onClick={() => requireAdmin()}>Desbloquear</Button>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -548,17 +578,24 @@ export default function SetorDetail() {
                     <Separator />
                     <div className="space-y-3">
                       <p className="text-sm font-medium text-muted-foreground">Celular</p>
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="w-full justify-start"
-                        data-testid="button-celular"
-                      >
-                        <a href={`tel:${setor.celular}`}>
-                          <MessageCircle className="mr-2 h-4 w-4" />
-                          {setor.celular}
-                        </a>
-                      </Button>
+                      {adminOpen ? (
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="w-full justify-start"
+                          data-testid="button-celular"
+                        >
+                          <a href={`tel:${setor.celular}`}>
+                            <MessageCircle className="mr-2 h-4 w-4" />
+                            {setor.celular}
+                          </a>
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" className="w-full justify-start" disabled>Somente Admin</Button>
+                          <Button variant="ghost" size="sm" className="h-9" onClick={() => requireAdmin()}>Desbloquear</Button>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

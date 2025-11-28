@@ -12,7 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { ArrowUpDown, Star, Filter, BarChart3, Copy, Phone, Mail, Building2 } from "lucide-react";
+import { ArrowUpDown, Star, Filter, BarChart3, Copy, Phone, Mail, Building2, Lock } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
+import { isMobilePhoneBR } from "./utils";
+import { Switch } from "@/components/ui/switch";
 import { DirectoryEntry, SortField, SortDirection } from "@/hooks/use-phone-directory";
 import { toast } from "@/hooks/use-toast";
 
@@ -38,6 +41,7 @@ interface DirectoryTableProps {
     onEdit?: (slug: string, ramal: string, setorNome: string, telefone: string) => void;
     onRemove?: (slug: string, ramal: string) => void;
     adminOpen: boolean;
+    onRequireAdmin?: () => Promise<boolean> | boolean;
 }
 
 export function DirectoryTable({
@@ -61,7 +65,8 @@ export function DirectoryTable({
     onToggleFavorite,
     onEdit,
     onRemove,
-    adminOpen
+    adminOpen,
+    onRequireAdmin
 }: DirectoryTableProps) {
     const useVirtual = totalEntries > 400;
     const rowHeight = 64;
@@ -93,7 +98,15 @@ export function DirectoryTable({
         );
     };
 
+    const [showTelefone, setShowTelefone] = useState(true);
+    const [showEmail, setShowEmail] = useState(true);
+    const [showAndar, setShowAndar] = useState(true);
     const visibleEntries = useVirtual ? entries.slice(startIndex, endIndex) : entries;
+    const topAccessCut = (() => {
+        const counts = visibleEntries.map(e => e.accessCount || 0).filter(c => c > 0).sort((a,b)=>b-a);
+        if (counts.length === 0) return 0;
+        return counts[Math.min(4, counts.length - 1)];
+    })();
 
     return (
         <>
@@ -164,19 +177,38 @@ export function DirectoryTable({
                                     </Tooltip>
                                 </TooltipProvider>
                             </ToggleGroup>
+                            <div className="hidden lg:flex items-center gap-3 ml-2 pl-2 border-l">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">Telefone</span>
+                                    <Switch checked={showTelefone} onCheckedChange={setShowTelefone} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">Celular/WhatsApp</span>
+                                    <Switch checked={showEmail} onCheckedChange={setShowEmail} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">Andar</span>
+                                    <Switch checked={showAndar} onCheckedChange={setShowAndar} />
+                                </div>
+                                {!adminOpen && showTelefone && (
+                                    <Button variant="outline" size="sm" onClick={() => onRequireAdmin?.()}>
+                                        Desbloquear celulares
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </>
                 )}
             </div>
             <div
                 onScroll={useVirtual ? (e) => setVirtualScrollTop((e.target as HTMLDivElement).scrollTop) : undefined}
-                style={useVirtual ? { maxHeight: `${viewportHeight}px`, overflowY: 'auto' } : undefined}
+                style={useVirtual ? { maxHeight: `${viewportHeight}px`, overflowY: 'auto' } : { maxHeight: '600px', overflowY: 'auto' }}
                 className="rounded-md border"
             >
                 <Table>
-                    <TableHeader className="border-b bg-muted/20">
+                    <TableHeader className="sticky top-0 z-10 border-b bg-muted/20">
                         <TableRow>
-                            <TableHead>
+                            <TableHead className="w-[240px]">
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -184,7 +216,7 @@ export function DirectoryTable({
                                     className="flex items-center"
                                     data-testid="button-sort-setor"
                                 >
-                                    Setor
+                                    Responsável
                                     {getSortIcon("setor")}
                                 </Button>
                             </TableHead>
@@ -200,20 +232,9 @@ export function DirectoryTable({
                                     {getSortIcon("bloco")}
                                 </Button>
                             </TableHead>
-                            <TableHead>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onSort("ramal")}
-                                    className="flex items-center"
-                                    data-testid="button-sort-ramal"
-                                >
-                                    Ramal
-                                    {getSortIcon("ramal")}
-                                </Button>
-                            </TableHead>
-                            <TableHead>Telefone</TableHead>
-                            <TableHead>E-mail</TableHead>
+                            
+                            {showTelefone && <TableHead>Telefone</TableHead>}
+                            {showEmail && <TableHead>Celular / WhatsApp</TableHead>}
                             <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -228,8 +249,8 @@ export function DirectoryTable({
                                 className={entry.isFav ? "bg-primary/5 hover:bg-primary/10 transition-colors" : "odd:bg-muted/20 hover:bg-muted/40 transition-colors"}
                                 style={{ height: rowHeight }}
                             >
-                                <TableCell className="font-medium align-top p-3">
-                                    <div className="max-w-[300px] break-words">
+                                <TableCell className="font-medium align-top p-3 w-[240px]">
+                                    <div className="max-w-[240px] break-words">
                                         <div className="flex items-center gap-2 mb-1">
                                             <Badge variant="secondary" className="font-mono text-xs">
                                                 {highlight(entry.sigla)}
@@ -241,54 +262,123 @@ export function DirectoryTable({
                                 <TableCell className="align-top p-3">
                                     <div className="text-sm">
                                         <div className="font-medium">{highlight(entry.bloco)}</div>
-                                        {entry.andar && (
+                                        {entry.andar && showAndar && (
                                             <div className="text-muted-foreground text-xs">{entry.andar}</div>
                                         )}
                                     </div>
                                 </TableCell>
-                                <TableCell className="p-3">
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="font-mono">
-                                            {highlight(entry.ramal)}
-                                        </Badge>
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText(entry.ramal);
-                                                            toast({ title: "Copiado", description: "Ramal copiado para a área de transferência." });
-                                                        }}
-                                                        className="h-6 w-6"
-                                                    >
-                                                        <Copy className="h-3 w-3" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>Copiar ramal</TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    </div>
-                                </TableCell>
+                                
+                                {showTelefone && (
                                 <TableCell className="p-3">
                                     {entry.telefone && (
                                         <div className="flex items-center gap-2 text-sm">
                                             <Phone className="h-3 w-3 text-muted-foreground" />
-                                            {highlight(entry.telefone)}
+                                            {(() => {
+                                                const personal = isMobilePhoneBR(entry.telefone);
+                                                if (!adminOpen && personal) return <span className="text-muted-foreground">Somente Admin</span>;
+                                                return highlight(entry.telefone);
+                                            })()}
+                                            {(() => {
+                                                const personal = isMobilePhoneBR(entry.telefone);
+                                                if (!adminOpen && personal) {
+                                                    return (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <span className="inline-flex items-center gap-1">
+                                                                        <Lock className="h-3 w-3 text-muted-foreground" />
+                                                                        <Button variant="ghost" size="sm" className="h-6" onClick={() => onRequireAdmin?.()}>Desbloquear</Button>
+                                                                    </span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>Apenas administradores podem ver celulares</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    );
+                                                }
+                                                return (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => {
+                                                                        navigator.clipboard.writeText(entry.telefone);
+                                                                        toast({ title: "Copiado", description: "Telefone copiado para a área de transferência." });
+                                                                    }}
+                                                                    className="h-6 w-6"
+                                                                >
+                                                                    <Copy className="h-3 w-3" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>Copiar telefone</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                );
+                                            })()}
                                         </div>
                                     )}
                                 </TableCell>
+                                )}
+                                {showEmail && (
                                 <TableCell className="p-3">
-                                    {entry.email && (
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <Mail className="h-3 w-3 text-muted-foreground" />
-                                            <a href={`mailto:${entry.email}`} className="hover:underline truncate max-w-[200px] block">
-                                                {entry.email}
-                                            </a>
+                                    {(entry.celular || entry.whatsapp) && (
+                                        <div className="flex items-center gap-3 text-sm">
+                                            {(() => {
+                                                const cel = entry.celular || "";
+                                                const isPersonal = isMobilePhoneBR(cel);
+                                                if (cel) {
+                                                    if (!adminOpen && isPersonal) {
+                                                        return (
+                                                            <span className="inline-flex items-center gap-1 text-muted-foreground">
+                                                                <Lock className="h-3 w-3" />
+                                                                <Button variant="ghost" size="sm" className="h-6" onClick={() => onRequireAdmin?.()}>Desbloquear</Button>
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <span className="inline-flex items-center gap-2">
+                                                            <Phone className="h-3 w-3 text-muted-foreground" />
+                                                            {highlight(cel)}
+                                                            <TooltipProvider>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => {
+                                                                                navigator.clipboard.writeText(cel);
+                                                                                toast({ title: "Copiado", description: "Celular copiado para a área de transferência." });
+                                                                            }}
+                                                                            className="h-6 w-6"
+                                                                        >
+                                                                            <Copy className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>Copiar celular</TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        </span>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
+                                            {(() => {
+                                                const wa = entry.whatsapp || entry.celular || "";
+                                                const digits = wa.replace(/\D/g, "");
+                                                if (!digits) return null;
+                                                const href = `https://wa.me/${digits}`;
+                                                return (
+                                                    <a href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-green-600 hover:underline">
+                                                        <SiWhatsapp className="h-4 w-4" />
+                                                        WhatsApp
+                                                    </a>
+                                                );
+                                            })()}
                                         </div>
                                     )}
                                 </TableCell>
+                                )}
                                 <TableCell className="text-right p-3">
                                     <div className="flex items-center justify-end gap-1">
                                         <Button

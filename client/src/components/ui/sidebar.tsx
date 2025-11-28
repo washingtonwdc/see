@@ -290,6 +290,29 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       aria-label="Toggle Sidebar"
       tabIndex={-1}
       onClick={toggleSidebar}
+      onMouseDown={(e) => {
+        if (e.button !== 0) return;
+        const wrapper = document.querySelector('[data-slot="sidebar-wrapper"]') as HTMLElement | null;
+        if (!wrapper) return;
+        const side = (e.currentTarget.closest('[data-side]')?.getAttribute('data-side') || 'left');
+        const startX = e.clientX;
+        const style = getComputedStyle(wrapper);
+        const startW = parseFloat(style.getPropertyValue('--sidebar-width')) || 256;
+        const minW = 180;
+        const maxW = 480;
+        const move = (ev: MouseEvent) => {
+          const dx = ev.clientX - startX;
+          const delta = side === 'left' ? dx : -dx;
+          const next = Math.min(maxW, Math.max(minW, Math.round(startW + delta)));
+          wrapper.style.setProperty('--sidebar-width', `${next}px`);
+        };
+        const up = () => {
+          window.removeEventListener('mousemove', move);
+          window.removeEventListener('mouseup', up);
+        };
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', up);
+      }}
       title="Toggle Sidebar"
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",

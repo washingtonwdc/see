@@ -19,6 +19,8 @@ export interface DirectoryEntry {
     ramal: string;
     telefone: string;
     email: string;
+    celular?: string;
+    whatsapp?: string;
     isFav: boolean;
     accessCount: number;
 }
@@ -65,47 +67,38 @@ export function usePhoneDirectory() {
         return Array.from(set).sort((a, b) => a.localeCompare(b));
     }, [setores]);
 
-    // Create phone directory entries
+    // Create responsável-focused directory entries
     const phoneEntries = useMemo(() => {
         if (!setores) return [];
 
         const entries: DirectoryEntry[] = [];
 
         setores.forEach(setor => {
-            if (setor.ramal_principal) {
-                const mainTel = setor.telefones?.find(t => t.ramal_original === setor.ramal_principal);
+            const respList = Array.isArray(setor.responsaveis) ? setor.responsaveis : [];
+            if (!respList.length) return;
+
+            const preferredRamal = setor.ramal_principal || (Array.isArray(setor.ramais) ? setor.ramais[0] : "");
+            const telForPreferred = preferredRamal
+                ? setor.telefones?.find(t => t.ramal_original === preferredRamal)?.numero || ""
+                : "";
+
+            respList.forEach((r, idx) => {
+                const idBase = setor.id * 10000 + idx;
                 entries.push({
-                    id: setor.id,
-                    setor: setor.nome,
+                    id: idBase,
+                    setor: r?.nome || "",
                     sigla: setor.sigla,
                     slug: setor.slug,
                     bloco: setor.bloco,
                     andar: setor.andar,
-                    ramal: setor.ramal_principal,
-                    telefone: mainTel?.numero || "",
+                    ramal: preferredRamal || "",
+                    telefone: telForPreferred,
                     email: setor.email,
-                    isFav: (setor.favoritos_ramais || []).includes(setor.ramal_principal),
-                    accessCount: (setor.acessos_ramais || {})[setor.ramal_principal] || 0,
+                    celular: setor.celular || "",
+                    whatsapp: setor.whatsapp || "",
+                    isFav: preferredRamal ? (setor.favoritos_ramais || []).includes(preferredRamal) : false,
+                    accessCount: preferredRamal ? (setor.acessos_ramais || {})[preferredRamal] || 0 : 0,
                 });
-            }
-
-            setor.ramais?.forEach((ramal, idx) => {
-                if (ramal !== setor.ramal_principal) {
-                    const tel = setor.telefones?.find(t => t.ramal_original === ramal);
-                    entries.push({
-                        id: setor.id * 1000 + idx,
-                        setor: setor.nome,
-                        sigla: setor.sigla,
-                        slug: setor.slug,
-                        bloco: setor.bloco,
-                        andar: setor.andar,
-                        ramal: ramal,
-                        telefone: tel?.numero || "",
-                        email: setor.email,
-                        isFav: (setor.favoritos_ramais || []).includes(ramal),
-                        accessCount: (setor.acessos_ramais || {})[ramal] || 0,
-                    });
-                }
             });
         });
 
@@ -132,7 +125,7 @@ export function usePhoneDirectory() {
             filtered = filtered.filter(e => (e.andar || "") === selectedAndar);
         }
         if (selectedResponsavel && selectedResponsavel !== "all") {
-            filtered = filtered.filter(e => (setores || []).some(s => s.slug === e.slug && (s.responsaveis || []).some(r => r?.nome === selectedResponsavel)));
+            filtered = filtered.filter(e => (e.setor || "") === selectedResponsavel);
         }
         if (selectedEmail && selectedEmail !== "all") {
             filtered = filtered.filter(e => (e.email || "") === selectedEmail);
