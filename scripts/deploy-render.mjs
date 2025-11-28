@@ -43,3 +43,21 @@ main().catch((e) => {
   console.error("Deploy error", e?.message || String(e));
   process.exit(1);
 });
+import fs from "fs";
+
+try {
+  const envPath = process.cwd() + "/.env.deploy";
+  if (fs.existsSync(envPath)) {
+    const raw = fs.readFileSync(envPath, "utf-8");
+    raw.split(/\r?\n/).forEach((line) => {
+      const s = line.trim();
+      if (!s || s.startsWith("#")) return;
+      const eq = s.indexOf("=");
+      if (eq > 0) {
+        const k = s.slice(0, eq).trim();
+        const v = s.slice(eq + 1).trim();
+        if (!process.env[k]) process.env[k] = v;
+      }
+    });
+  }
+} catch {}
