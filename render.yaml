@@ -1,10 +1,23 @@
 services:
   - type: web
-    name: agenda-sse
-    env: node
-    plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+    name: lovable-data
+    env: docker
+    dockerfilePath: Dockerfile
+    autoDeploy: true
+    plan: starter
+    healthCheckPath: /api/version
+    disk:
+      name: attached-assets
+      mountPath: /app/attached_assets
+      sizeGB: 2
     envVars:
       - key: NODE_ENV
         value: production
+      - key: MASTER_PASSWORD
+        sync: false
+      - key: MASTER_UNLOCK_MINUTES
+        value: "5"
+      - key: APP_VERSION
+        value: "1.0.0"
+      - key: APP_RELEASE_NOTES
+        value: "Primeira versão pública com agenda e lista telefônica"
