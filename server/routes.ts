@@ -2,10 +2,32 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import type { Request, Response } from "express";
+import fs from "fs";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple master password unlock window (60s) for edit operations
   let masterUnlockUntil = 0;
+  const unlockAttempts = new Map<string, { count: number; resetAt: number }>();
+  const serverStartedAt = new Date().toISOString();
+  const resolveVersion = () => {
+    try {
+      const tryPaths = [
+        path.resolve(import.meta.dirname, "../package.json"),
+        path.resolve(import.meta.dirname, "../../package.json"),
+      ];
+      for (const p of tryPaths) {
+        if (fs.existsSync(p)) {
+          const raw = fs.readFileSync(p, "utf-8");
+          const pkg = JSON.parse(raw);
+          if (pkg && typeof pkg.version === "string") return pkg.version as string;
+        }
+      }
+    } catch {}
+    return String(process.env.APP_VERSION || process.env.npm_package_version || "0.0.0");
+  };
+  const appVersion = resolveVersion();
+  const releaseNotes = String(process.env.APP_RELEASE_NOTES || "");
   const resolveSlugParam = async (p: string) => {
     const num = Number(p);
     if (!Number.isNaN(num) && Number.isFinite(num)) {
@@ -32,9 +54,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return false;
   };
 
+  const sanitizeSetorPublic = (s: any) => {
+    if (!s) return s;
+    const clone = { ...s };
+    delete clone.celular;
+    delete clone.whatsapp;
+    if (Array.isArray(clone.responsaveis)) {
+      clone.responsaveis = [];
+    }
+    return clone;
+  };
+
   // POST /api/admin/unlock - Validate master password and open unlock window
   app.post("/api/admin/unlock", async (req: Request, res: Response) => {
     try {
+      const ip = String((req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown")).split(",")[0];
+      const now = Date.now();
+      const rec = unlockAttempts.get(ip) || { count: 0, resetAt: now + 60 * 1000 };
+      if (now > rec.resetAt) { rec.count = 0; rec.resetAt = now + 60 * 1000; }
+      rec.count += 1; unlockAttempts.set(ip, rec);
+      if (rec.count > 5) {
+        return res.status(429).json({ error: "Muitas tentativas. Tente novamente em instantes." });
+      }
       if (!isMasterAllowed(req)) {
         return res.status(403).json({ error: "Senha mestra inválida" });
       }
@@ -57,15 +98,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           bloco as string,
           andar as string
         );
-        return res.json(results);
+        const allowed = isMasterAllowed(req);
+        return res.json(allowed ? results : results.map(sanitizeSetorPublic));
       }
 
       // Get all setores
       const setores = await storage.getAllSetores();
-      res.json(setores);
+      const allowed = isMasterAllowed(req);
+      res.json(allowed ? setores : setores.map(sanitizeSetorPublic));
     } catch (error) {
       console.error("Error fetching setores:", error);
       res.status(500).json({ error: "Failed to fetch setores" });
+    }
+  });
+
+  app.get("/api/version", async (_req: Request, res: Response) => {
+    try {
+      const stats = await storage.getStatistics();
+      res.json({
+        version: appVersion,
+        env: app.get("env"),
+        serverStartedAt,
+        totalSetores: stats.totalSetores,
+        releaseNotes,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Falha ao obter versão" });
     }
   });
 
@@ -76,12 +134,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isMasterAllowed(req)) {
         return res.status(403).json({ error: "Senha mestra inválida" });
       }
+      const email = String(body.email || "").trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "E-mail inválido" });
+      }
+      const nome = String(body.nome || "").trim();
+      const sigla = String(body.sigla || "").trim();
+      if (!nome || !sigla) {
+        return res.status(400).json({ error: "Informe nome e sigla" });
+      }
       const setor = storage.createSetor({
-        nome: body.nome,
-        sigla: body.sigla,
+        nome,
+        sigla,
         bloco: body.bloco,
         andar: body.andar,
-        email: body.email,
+        email,
         observacoes: body.observacoes,
         ramal_principal: body.ramal_principal,
         ramais: Array.isArray(body.ramais) ? body.ramais : [],
@@ -154,7 +221,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Setor not found" });
       }
 
-      res.json(setor);
+      const allowed = isMasterAllowed(req);
+      res.json(allowed ? setor : sanitizeSetorPublic(setor));
     } catch (error) {
       console.error("Error fetching setor:", error);
       res.status(500).json({ error: "Failed to fetch setor" });

@@ -1,4 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { AlertCircle } from "lucide-react";
 
 export default function NotFound() {
@@ -11,9 +13,14 @@ export default function NotFound() {
             <h1 className="text-2xl font-bold text-gray-900">404 Page Not Found</h1>
           </div>
 
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
-          </p>
+          <div className="mt-6 flex items-center gap-3">
+            <Button asChild>
+              <Link href="/">Ir para Home</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/setores">Buscar Setores</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

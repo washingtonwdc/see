@@ -31,8 +31,17 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      const sensitive = (
+        path.includes("/admin/unlock") ||
+        path.includes("/contatos") ||
+        path.includes("/ramais") ||
+        path.includes("/import")
+      );
+      if (capturedJsonResponse && !sensitive) {
+        try {
+          const sanitized = JSON.stringify(capturedJsonResponse);
+          logLine += ` :: ${sanitized}`;
+        } catch {}
       }
 
       if (logLine.length > 80) {

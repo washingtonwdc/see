@@ -7,6 +7,7 @@ interface SearchBarProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  id?: string;
 }
 
 export function SearchBar({
@@ -14,6 +15,7 @@ export function SearchBar({
   onChange,
   placeholder = "Buscar por nome, sigla, bloco, responsável...",
   className = "",
+  id,
 }: SearchBarProps) {
   return (
     <div className={`relative ${className}`}>
@@ -24,6 +26,7 @@ export function SearchBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="pl-12 pr-10"
+        id={id}
         data-testid="input-search"
       />
       {value && (

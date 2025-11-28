@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Table,
     TableBody,
@@ -42,6 +42,8 @@ interface DirectoryTableProps {
     onRemove?: (slug: string, ramal: string) => void;
     adminOpen: boolean;
     onRequireAdmin?: () => Promise<boolean> | boolean;
+    onSelectEntry?: (entry: DirectoryEntry) => void;
+    compact?: boolean;
 }
 
 export function DirectoryTable({
@@ -66,10 +68,12 @@ export function DirectoryTable({
     onEdit,
     onRemove,
     adminOpen,
-    onRequireAdmin
+    onRequireAdmin,
+    onSelectEntry,
+    compact = false
 }: DirectoryTableProps) {
     const useVirtual = totalEntries > 400;
-    const rowHeight = 64;
+    const rowHeight = compact ? 48 : 64;
     const viewportHeight = 560;
     const [virtualScrollTop, setVirtualScrollTop] = useState(0);
     const visibleCount = Math.ceil(viewportHeight / rowHeight) + 4;
@@ -101,6 +105,15 @@ export function DirectoryTable({
     const [showTelefone, setShowTelefone] = useState(true);
     const [showEmail, setShowEmail] = useState(true);
     const [showAndar, setShowAndar] = useState(true);
+    useEffect(() => {
+        if (compact) {
+            setShowEmail(false);
+            setShowAndar(false);
+        } else {
+            setShowEmail(true);
+            setShowAndar(true);
+        }
+    }, [compact]);
     const visibleEntries = useVirtual ? entries.slice(startIndex, endIndex) : entries;
     const topAccessCut = (() => {
         const counts = visibleEntries.map(e => e.accessCount || 0).filter(c => c > 0).sort((a,b)=>b-a);
@@ -379,23 +392,28 @@ export function DirectoryTable({
                                     )}
                                 </TableCell>
                                 )}
-                                <TableCell className="text-right p-3">
-                                    <div className="flex items-center justify-end gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => onToggleFavorite(entry.slug, entry.ramal, !entry.isFav)}
-                                            className={entry.isFav ? "text-yellow-500" : "text-muted-foreground"}
-                                        >
-                                            <Star className={`h-4 w-4 ${entry.isFav ? "fill-current" : ""}`} />
-                                        </Button>
-                                        {adminOpen && onEdit && (
-                                            <Button variant="ghost" size="sm" onClick={() => onEdit(entry.slug, entry.ramal, entry.setor, entry.telefone)}>
-                                                Editar
-                                            </Button>
-                                        )}
-                                    </div>
-                                </TableCell>
+                        <TableCell className="text-right p-3">
+                            <div className="flex items-center justify-end gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onToggleFavorite(entry.slug, entry.ramal, !entry.isFav)}
+                                    className={entry.isFav ? "text-yellow-500" : "text-muted-foreground"}
+                                >
+                                    <Star className={`h-4 w-4 ${entry.isFav ? "fill-current" : ""}`} />
+                                </Button>
+                                {onSelectEntry && (
+                                    <Button variant="ghost" size="sm" onClick={() => onSelectEntry(entry)}>
+                                        Selecionar
+                                    </Button>
+                                )}
+                                {adminOpen && onEdit && (
+                                    <Button variant="ghost" size="sm" onClick={() => onEdit(entry.slug, entry.ramal, entry.setor, entry.telefone)}>
+                                        Editar
+                                    </Button>
+                                )}
+                            </div>
+                        </TableCell>
                             </TableRow>
                         ))}
                         {useVirtual && endIndex < entries.length && (

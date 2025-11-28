@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { usePhoneDirectory, DirectoryEntry } from "@/hooks/use-phone-directory";
 import { DirectoryFilters } from "@/components/phone-directory/directory-filters";
 import { DirectoryTable } from "@/components/phone-directory/directory-table";
@@ -62,6 +63,7 @@ export default function ListaTelefonica() {
   const [editTarget, setEditTarget] = useState<{ slug: string; ramal: string; setorNome: string } | null>(null);
   const [editPhone, setEditPhone] = useState("");
   const [selectedEntry, setSelectedEntry] = useState<DirectoryEntry | null>(null); // State for selected entry for share/QR
+  const [compact, setCompact] = useState(false);
 
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const debouncedSearch = useDebounce(localSearch, 300);
@@ -134,6 +136,30 @@ export default function ListaTelefonica() {
     link.click();
   };
 
+  const handleExportJSON = (data: DirectoryEntry[]) => {
+    const sanitized = data.map(e => {
+      const digits = String(e.telefone || "").replace(/\D/g, "");
+      const isMobile = isMobilePhoneBR(e.telefone || "");
+      const telefone = (!adminOpen && isMobile) ? "Somente Admin" : e.telefone;
+      return {
+        setor: e.setor,
+        sigla: e.sigla,
+        bloco: e.bloco,
+        andar: e.andar,
+        telefone,
+        email: e.email,
+        ramal: e.ramal,
+        slug: e.slug,
+        favorito: e.isFav,
+      };
+    });
+    const blob = new Blob([JSON.stringify(sanitized, null, 2)], { type: "application/json;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "lista_telefonica.json";
+    link.click();
+  };
+
   const handleAddContact = async (data: { slug: string; ramal: string; telefone: string; email: string }) => {
     await addContactMutation.mutateAsync(data);
   };
@@ -166,40 +192,44 @@ export default function ListaTelefonica() {
   return (
     <div className="container mx-auto p-6 max-w-[1600px]">
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Lista Telefônica</h1>
-            <p className="text-muted-foreground mt-1">
-              Encontre ramais, telefones e e-mails dos responsáveis.
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            {/* Quick‑win: Share & QR */}
-            {selectedEntry && (
-              <div className="flex items-center gap-2">
-                <ContactShareButtons
-                  nome={selectedEntry.setor}
-                  telefone={selectedEntry.telefone}
-                  email={selectedEntry.email}
-                />
-                <QRCodeCanvas
-                  value={selectedEntry.telefone}
-                  size={96}
-                  level="H"
-                  includeMargin={true}
-                />
-              </div>
-            )}
-            <DirectoryActions
-              filteredEntries={filteredAndSortedEntries}
-              currentEntries={currentEntries}
-              onExportCSV={handleExportCSV}
-              onAddContact={() => setAddOpen(true)}
-              adminOpen={adminOpen}
-              requireAdmin={requireAdmin}
-            />
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Lista Telefônica</h1>
+          <p className="text-muted-foreground mt-1">
+            Encontre ramais, telefones e e-mails dos responsáveis.
+          </p>
         </div>
+        <div className="flex items-center gap-4">
+          {/* Quick‑win: Share & QR */}
+          {selectedEntry && (
+            <div className="flex items-center gap-2">
+              <ContactShareButtons
+                nome={selectedEntry.setor}
+                telefone={selectedEntry.telefone}
+                email={selectedEntry.email}
+              />
+              <QRCodeCanvas
+                value={selectedEntry.telefone}
+                size={96}
+                level="H"
+                includeMargin={true}
+              />
+            </div>
+          )}
+          <Button variant={compact ? "default" : "outline"} size="sm" onClick={() => setCompact(v => !v)} data-testid="toggle-compact-lista">
+            Modo compacto
+          </Button>
+          <DirectoryActions
+            filteredEntries={filteredAndSortedEntries}
+            currentEntries={currentEntries}
+            onExportCSV={handleExportCSV}
+            onExportJSON={handleExportJSON}
+            onAddContact={() => setAddOpen(true)}
+            adminOpen={adminOpen}
+            requireAdmin={requireAdmin}
+          />
+        </div>
+      </div>
 
         <Card>
           <CardHeader className="p-6">
@@ -252,30 +282,32 @@ export default function ListaTelefonica() {
                 description={searchQuery ? "Tente buscar com outros termos." : "Não há contatos cadastrados."}
               />
             ) : (
-              <DirectoryTable
-                entries={currentEntries}
-                totalEntries={filteredAndSortedEntries.length}
-                page={page}
-                pageSize={pageSize}
-                totalPages={totalPages}
-                onPageChange={setPage}
-                onPageSizeChange={setPageSize}
-                sortField={sortField}
-                sortDirection={sortDirection}
-                onSort={toggleSort}
-                favoritesFirst={favoritesFirst}
-                onFavoritesFirstChange={setFavoritesFirst}
-                favoritesOnly={favoritesOnly}
-                onFavoritesOnlyChange={setFavoritesOnly}
-                accessFirst={accessFirst}
-                onAccessFirstChange={setAccessFirst}
-                searchQuery={searchQuery}
-                onToggleFavorite={(slug, numero, isFav) => toggleFavoriteMutation.mutate({ slug, numero, favorite: isFav })}
-                onEdit={handleEditContact}
-                onRemove={handleRemoveContact}
-                adminOpen={adminOpen}
-                onRequireAdmin={requireAdmin}
-              />
+          <DirectoryTable
+            entries={currentEntries}
+            totalEntries={filteredAndSortedEntries.length}
+            page={page}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={toggleSort}
+            favoritesFirst={favoritesFirst}
+            onFavoritesFirstChange={setFavoritesFirst}
+            favoritesOnly={favoritesOnly}
+            onFavoritesOnlyChange={setFavoritesOnly}
+            accessFirst={accessFirst}
+            onAccessFirstChange={setAccessFirst}
+            searchQuery={searchQuery}
+            onToggleFavorite={(slug, numero, isFav) => toggleFavoriteMutation.mutate({ slug, numero, favorite: isFav })}
+            onEdit={handleEditContact}
+            onRemove={handleRemoveContact}
+            adminOpen={adminOpen}
+            onRequireAdmin={requireAdmin}
+            onSelectEntry={setSelectedEntry}
+            compact={compact}
+          />
             )}
           </CardContent>
         </Card>

@@ -23,6 +23,7 @@ import type { Setor } from "@shared/schema";
 import { toast } from "@/hooks/use-toast";
 import { useAdmin } from "@/components/admin-provider";
 import { Footer } from "@/components/footer";
+import { BackToTop } from "@/components/back-to-top";
 
 export default function SetoresList() {
   const { adminOpen, requireAdmin } = useAdmin();
@@ -231,12 +232,32 @@ export default function SetoresList() {
       setIsCreating(false);
       // refresh lists
       queryClient.invalidateQueries({ queryKey: ["/api/setores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/version"] });
       navigate(`/setor/${newSetor.id}`);
     },
     onError: (e: Error) => {
       toast({ title: "Falha ao criar setor", description: e.message, variant: "destructive" });
     },
   });
+
+  const [compact, setCompact] = useState(false);
+  const exportFilteredJSON = () => {
+    const arr = Array.isArray(displaySetores) ? displaySetores : [];
+    const payload = arr.map(s => ({ id: s.id, sigla: s.sigla, nome: s.nome, bloco: s.bloco, andar: s.andar, email: s.email, ramal_principal: s.ramal_principal, slug: s.slug }));
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8;" });
+    const filename = `setores_filtrados_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+  };
+  const exportFilteredCSV = () => {
+    const arr = Array.isArray(displaySetores) ? displaySetores : [];
+    const header = ["ID","Sigla","Nome","Bloco","Andar","Email","Ramal Principal","Slug"];
+    const lines = arr.map(s => [s.id, s.sigla, s.nome, s.bloco || "", s.andar || "", s.email || "", s.ramal_principal || "", s.slug]);
+    const csv = [header, ...lines].map(row => row.map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const filename = `setores_filtrados_${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+  };
 
   return (
     <>
@@ -252,7 +273,7 @@ export default function SetoresList() {
 
           {/* Search and Filters */}
           <div className="mb-8 space-y-4">
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            <SearchBar value={searchQuery} onChange={setSearchQuery} id="search-setor" />
 
             <div className="flex items-center gap-4 flex-wrap">
               <Button
@@ -268,6 +289,15 @@ export default function SetoresList() {
                     {activeFiltersCount}
                   </Badge>
                 )}
+              </Button>
+              <Button variant={compact ? "default" : "outline"} size="sm" onClick={() => setCompact(v => !v)} data-testid="toggle-compact">
+                Modo compacto
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportFilteredCSV} data-testid="button-export-setores-csv">
+                Exportar CSV (filtrados)
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportFilteredJSON} data-testid="button-export-setores-json">
+                Exportar JSON (filtrados)
               </Button>
 
               {activeFiltersCount > 0 && (
@@ -354,9 +384,9 @@ export default function SetoresList() {
                   {displaySetores.length} {displaySetores.length === 1 ? 'setor encontrado' : 'setores encontrados'}
                 </p>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className={`grid gap-4 sm:grid-cols-2 ${compact ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
                 {displaySetores.map(setor => (
-                  <SetorCard key={setor.id} setor={setor} />
+                  <SetorCard key={setor.id} setor={setor} compact={compact} />
                 ))}
               </div>
             </>
@@ -418,6 +448,7 @@ export default function SetoresList() {
           </DialogFooter>
         </DialogContent>
       </Dialog >
+      <BackToTop />
       <Footer />
     </>
   );

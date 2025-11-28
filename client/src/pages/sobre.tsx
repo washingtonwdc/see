@@ -1,8 +1,11 @@
 import { Building2, Phone, Search, Users, Mail, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Sobre() {
+  type VersionInfo = { version: string; env: string; serverStartedAt: string; totalSetores: number; releaseNotes?: string };
+  const { data: versionInfo } = useQuery<VersionInfo>({ queryKey: ["/api/version"] });
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
@@ -147,6 +150,19 @@ export default function Sobre() {
               </div>
             </CardContent>
           </Card>
+
+          {versionInfo?.releaseNotes && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Notas da Versão {versionInfo.version}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm dark:prose-invert">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{versionInfo.releaseNotes}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

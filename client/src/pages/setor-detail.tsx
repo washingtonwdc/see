@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useMemo } from "react";
 import { useRoute, Link } from "wouter";
+import { BackToTop } from "@/components/back-to-top";
 import {
   Building2,
   MapPin,
@@ -750,6 +751,7 @@ export default function SetorDetail() {
           </div>
         </DialogContent>
       </Dialog>
+      <BackToTop />
     </div>
   );
 }

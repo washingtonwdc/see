@@ -314,6 +314,8 @@ export function usePhoneDirectory() {
         onSuccess: () => {
             toast({ title: "Telefone atualizado", description: "Entrada na lista foi salva." });
             queryClient.invalidateQueries({ queryKey: ["/api/setores"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/version"] });
         },
         onError: (e: Error) => {
             toast({ title: "Falha ao atualizar telefone", description: e.message, variant: "destructive" });
@@ -377,6 +379,8 @@ export function usePhoneDirectory() {
         onSuccess: () => {
             toast({ title: "Contato adicionado", description: "Entrada criada na lista telefônica." });
             queryClient.invalidateQueries({ queryKey: ["/api/setores"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/version"] });
         },
         onError: (e: Error) => {
             toast({ title: "Falha ao adicionar contato", description: e.message, variant: "destructive" });
@@ -401,6 +405,8 @@ export function usePhoneDirectory() {
         onSuccess: () => {
             toast({ title: "Telefone removido", description: "Entrada atualizada com sucesso." });
             queryClient.invalidateQueries({ queryKey: ["/api/setores"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/statistics"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/version"] });
         },
         onError: (e: Error) => {
             toast({ title: "Falha ao remover telefone", description: e.message, variant: "destructive" });
