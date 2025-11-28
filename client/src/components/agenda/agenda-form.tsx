@@ -113,17 +113,18 @@ export function AgendaForm({ onAdd }: AgendaFormProps) {
                                 </div>
                             </div>
                         </PopoverContent>
-                        <Select value={String(duracao)} onValueChange={(v) => setDuracao(Number(v))}>
-                            <SelectTrigger id="duracao">
-                                <SelectValue placeholder="Selecionar duração" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="30">30 minutos</SelectItem>
-                                <SelectItem value="60">60 minutos</SelectItem>
-                                <SelectItem value="90">90 minutos</SelectItem>
-                                <SelectItem value="120">120 minutos</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    </Popover>
+                    <Select value={String(duracao)} onValueChange={(v) => setDuracao(Number(v))}>
+                        <SelectTrigger id="duracao">
+                            <SelectValue placeholder="Selecionar duração" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="30">30 minutos</SelectItem>
+                            <SelectItem value="60">60 minutos</SelectItem>
+                            <SelectItem value="90">90 minutos</SelectItem>
+                            <SelectItem value="120">120 minutos</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="notas">Notas</label>

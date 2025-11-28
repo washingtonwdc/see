@@ -49,6 +49,10 @@ export function AgendaFilters({
             </Tabs>
             <Toggle pressed={hideCompleted} onPressedChange={onHideCompletedChange} aria-label="Ocultar concluídos" variant="outline">
                 Ocultar concluídos
+            </Toggle>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline">
                         {selectedDateFilter ? `${selectedDateFilter}${showWeekFromSelected ? " (semana)" : ""}` : "Filtrar por data"}
                     </Button>
                 </PopoverTrigger>

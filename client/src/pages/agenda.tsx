@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AgendaForm } from "@/components/agenda/agenda-form";
 import { AgendaList } from "@/components/agenda/agenda-list";
 import { AgendaFilters } from "@/components/agenda/agenda-filters";
 import { AgendaExport } from "@/components/agenda/agenda-export";
 import { EditAgendaDialog } from "@/components/agenda/edit-agenda-dialog";
 import { useAgenda, AgendaItem } from "@/hooks/use-agenda";
+import { useDebounce } from "@/hooks/use-debounce";
+import { BackToTop } from "@/components/back-to-top";
 
 
 export default function AgendaPage() {
@@ -30,6 +32,22 @@ export default function AgendaPage() {
     toggleCompleted,
     importItems
   } = useAgenda();
+
+  const [localSearch, setLocalSearch] = useState(search);
+  const debouncedSearch = useDebounce(localSearch, 300);
+
+  useEffect(() => {
+    setSearch(debouncedSearch);
+  }, [debouncedSearch, setSearch]);
+
+  // Sync local search if external search changes (though mainly one-way here)
+  useEffect(() => {
+    if (search !== debouncedSearch) {
+      // This might cause a loop if not careful, but since we control setSearch via debouncedSearch, 
+      // we mainly want to initialize or reset.
+      // Actually, let's just use localSearch for the input.
+    }
+  }, [search]);
 
   const [editingItem, setEditingItem] = useState<AgendaItem | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -127,8 +145,8 @@ export default function AgendaPage() {
               <div className="border-t pt-6">
                 <h2 className="text-lg font-semibold mb-4">Filtros</h2>
                 <AgendaFilters
-                  search={search}
-                  onSearchChange={setSearch}
+                  search={localSearch}
+                  onSearchChange={setLocalSearch}
                   filter={filter}
                   onFilterChange={setFilter}
                   hideCompleted={hideCompleted}
@@ -163,6 +181,7 @@ export default function AgendaPage() {
                 setEditDialogOpen(true);
               }}
               onRemove={removeItem}
+              totalItemsCount={items.length}
             />
           </div>
         </div>
@@ -173,6 +192,7 @@ export default function AgendaPage() {
           onOpenChange={setEditDialogOpen}
           onSave={updateItem}
         />
+        <BackToTop />
       </div>
     </div>
   );

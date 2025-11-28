@@ -8,21 +8,36 @@ interface AgendaListProps {
     onToggleCompleted: (id: string) => void;
     onEdit: (item: AgendaItem) => void;
     onRemove: (id: string) => void;
+    totalItemsCount: number;
 }
 
-export function AgendaList({ groupedItems, onToggleCompleted, onEdit, onRemove }: AgendaListProps) {
+export function AgendaList({ groupedItems, onToggleCompleted, onEdit, onRemove, totalItemsCount }: AgendaListProps) {
     if (groupedItems.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-xl bg-muted/30" data-testid="text-empty-agenda">
-                <div className="bg-muted p-4 rounded-full mb-4">
-                    <CalendarIcon className="h-8 w-8 text-muted-foreground" />
+        if (totalItemsCount === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-xl bg-muted/30" data-testid="text-empty-agenda">
+                    <div className="bg-muted p-4 rounded-full mb-4">
+                        <CalendarIcon className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1">Nenhum compromisso</h3>
+                    <p className="text-muted-foreground max-w-sm">
+                        Sua agenda está vazia. Adicione um novo compromisso para começar a organizar seu dia.
+                    </p>
                 </div>
-                <h3 className="text-lg font-semibold mb-1">Nenhum compromisso</h3>
-                <p className="text-muted-foreground max-w-sm">
-                    Sua agenda está vazia. Adicione um novo compromisso para começar a organizar seu dia.
-                </p>
-            </div>
-        );
+            );
+        } else {
+            return (
+                <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-xl bg-muted/30">
+                    <div className="bg-muted p-4 rounded-full mb-4">
+                        <CalendarIcon className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1">Nenhum resultado encontrado</h3>
+                    <p className="text-muted-foreground max-w-sm">
+                        Tente ajustar seus filtros ou busca para encontrar o que procura.
+                    </p>
+                </div>
+            );
+        }
     }
 
     return (

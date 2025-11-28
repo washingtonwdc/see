@@ -19,6 +19,10 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
+  optimizeDeps: {
+    noDiscovery: true,
+    include: []
+  },
   server: {
     fs: {
       strict: true,
