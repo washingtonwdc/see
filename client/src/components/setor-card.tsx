@@ -90,7 +90,7 @@ export function SetorCard({ setor }: SetorCardProps) {
           className="w-full justify-between"
           data-testid={`button-ver-detalhes-${setor.id}`}
         >
-          <Link href={`/setor/${setor.slug}`}>
+          <Link href={`/setor/${setor.id}`}>
             Ver detalhes
             <ChevronRight className="h-4 w-4" />
           </Link>

@@ -31,8 +31,8 @@ import { toast } from "@/hooks/use-toast";
 import { useAdmin } from "@/components/admin-provider";
 
 export default function SetorDetail() {
-  const [, params] = useRoute("/setor/:slug");
-  const slug = params?.slug;
+  const [, params] = useRoute("/setor/:idOrSlug");
+  const idOrSlug = params?.idOrSlug;
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false as boolean);
   const [masterPassword, setMasterPassword] = useState("");
@@ -63,15 +63,15 @@ export default function SetorDetail() {
   const { adminOpen, requireAdmin } = useAdmin();
 
   const { data: setor, isLoading } = useQuery<Setor>({
-    queryKey: ["/api/setores", slug],
-    enabled: !!slug,
+    queryKey: ["/api/setores", idOrSlug],
+    enabled: !!idOrSlug,
   });
 
   const { data: topRamais } = useQuery<{ numero: string; count: number }[]>({
-    queryKey: ["/api/setores", slug, "topRamais"],
-    enabled: !!slug,
+    queryKey: ["/api/setores", idOrSlug, "topRamais"],
+    enabled: !!idOrSlug,
     queryFn: async () => {
-      const res = await fetch(`/api/setores/${slug}/ramais/top?limit=5`);
+      const res = await fetch(`/api/setores/${idOrSlug}/ramais/top?limit=5`);
       if (!res.ok) throw new Error("Falha ao obter top ramais");
       return res.json();
     },
@@ -121,7 +121,7 @@ export default function SetorDetail() {
 
   const mutation = useMutation({
     mutationFn: async (payload: typeof form) => {
-      const res = await fetch(`/api/setores/${slug}`, {
+      const res = await fetch(`/api/setores/${idOrSlug}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(masterPassword ? { "X-Master-Password": masterPassword } : {}) },
         body: JSON.stringify({
@@ -134,7 +134,7 @@ export default function SetorDetail() {
     },
     onSuccess: () => {
       toast({ title: "Contatos atualizados", description: "Os contatos do setor foram salvos." });
-      queryClient.invalidateQueries({ queryKey: ["/api/setores", slug] });
+      queryClient.invalidateQueries({ queryKey: ["/api/setores", idOrSlug] });
       setIsEditing(false);
     },
     onError: (err: any) => {
@@ -145,7 +145,7 @@ export default function SetorDetail() {
   // Mutations for ramais access history and favorites
   const recordAccess = useMutation({
     mutationFn: async (numero: string) => {
-      const res = await fetch(`/api/setores/${slug}/ramais/access`, {
+      const res = await fetch(`/api/setores/${idOrSlug}/ramais/access`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(masterPassword ? { "X-Master-Password": masterPassword } : {}) },
         body: JSON.stringify({ numero, ...(masterPassword ? { master_password: masterPassword } : {}) }),
@@ -154,13 +154,13 @@ export default function SetorDetail() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/setores", slug] });
+      queryClient.invalidateQueries({ queryKey: ["/api/setores", idOrSlug] });
     },
   });
 
   const toggleFavorite = useMutation({
     mutationFn: async ({ numero, favorite }: { numero: string; favorite: boolean }) => {
-      const res = await fetch(`/api/setores/${slug}/ramais/favorite`, {
+      const res = await fetch(`/api/setores/${idOrSlug}/ramais/favorite`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(masterPassword ? { "X-Master-Password": masterPassword } : {}) },
         body: JSON.stringify({ numero, favorite, ...(masterPassword ? { master_password: masterPassword } : {}) }),
@@ -169,7 +169,7 @@ export default function SetorDetail() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/setores", slug] });
+      queryClient.invalidateQueries({ queryKey: ["/api/setores", idOrSlug] });
     },
   });
 

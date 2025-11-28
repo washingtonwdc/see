@@ -6,6 +6,14 @@ import type { Request, Response } from "express";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple master password unlock window (60s) for edit operations
   let masterUnlockUntil = 0;
+  const resolveSlugParam = async (p: string) => {
+    const num = Number(p);
+    if (!Number.isNaN(num) && Number.isFinite(num)) {
+      const s = await storage.getSetorById(num);
+      return s ? s.slug : p;
+    }
+    return p;
+  };
   const isMasterAllowed = (req: Request): boolean => {
     const now = Date.now();
     if (now < masterUnlockUntil) return true;
@@ -133,11 +141,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/setores/:slug - Get setor by slug
+  // GET /api/setores/:slug - Get setor by slug or id
   app.get("/api/setores/:slug", async (req, res) => {
     try {
       const { slug } = req.params;
-      const setor = await storage.getSetorBySlug(slug);
+      const num = Number(slug);
+      const setor = !Number.isNaN(num) && Number.isFinite(num)
+        ? await storage.getSetorById(num)
+        : await storage.getSetorBySlug(slug);
 
       if (!setor) {
         return res.status(404).json({ error: "Setor not found" });
@@ -154,6 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/setores/:slug/contatos", async (req: Request, res: Response) => {
     try {
       const { slug } = req.params;
+      const targetSlug = await resolveSlugParam(slug);
       const body = req.body || {};
       if (!isMasterAllowed(req)) {
         return res.status(403).json({ error: "Senha mestra inválida" });
@@ -172,7 +184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       Object.keys(body || {}).forEach((k) => {
         if (allowedKeys.has(k)) payload[k] = (body as any)[k];
       });
-      const updated = storage.updateSetorContacts(slug, payload);
+      const updated = storage.updateSetorContacts(targetSlug, payload);
       if (!updated) {
         return res.status(404).json({ error: "Setor não encontrado" });
       }
@@ -187,6 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/setores/:slug", async (req: Request, res: Response) => {
     try {
       const { slug } = req.params;
+      const targetSlug = await resolveSlugParam(slug);
       const body = req.body || {};
       // Any field edit requires master unlock
       if (!isMasterAllowed(req)) {
@@ -209,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       Object.keys(body || {}).forEach((k) => {
         if (allowedKeys.has(k)) payload[k] = (body as any)[k];
       });
-      const updated = storage.updateSetorPartial(slug, payload);
+      const updated = storage.updateSetorPartial(targetSlug, payload);
       if (!updated) {
         return res.status(404).json({ error: "Setor não encontrado" });
       }
@@ -224,13 +237,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/setores/:slug/ramais/access", async (req: Request, res: Response) => {
     try {
       const { slug } = req.params;
+      const targetSlug = await resolveSlugParam(slug);
       // Qualquer alteração exige desbloqueio pela senha mestra
       if (!isMasterAllowed(req)) {
         return res.status(403).json({ error: "Senha mestra inválida" });
       }
       const { numero } = req.body || {};
       if (!numero) return res.status(400).json({ error: "Número do ramal é obrigatório" });
-      const updated = storage.incrementRamalAccess(slug, String(numero));
+      const updated = storage.incrementRamalAccess(targetSlug, String(numero));
       if (!updated) return res.status(404).json({ error: "Setor não encontrado" });
       return res.json({ ok: true, acessos_ramais: updated.acessos_ramais || {} });
     } catch (error) {
@@ -243,6 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/setores/:slug/ramais/favorite", async (req: Request, res: Response) => {
     try {
       const { slug } = req.params;
+      const targetSlug = await resolveSlugParam(slug);
       // Qualquer alteração exige desbloqueio pela senha mestra
       if (!isMasterAllowed(req)) {
         return res.status(403).json({ error: "Senha mestra inválida" });
@@ -251,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!numero || typeof favorite === "undefined") {
         return res.status(400).json({ error: "Campos 'numero' e 'favorite' são obrigatórios" });
       }
-      const updated = storage.setFavoriteRamal(slug, String(numero), !!favorite);
+      const updated = storage.setFavoriteRamal(targetSlug, String(numero), !!favorite);
       if (!updated) return res.status(404).json({ error: "Setor não encontrado" });
       return res.json({ ok: true, favoritos_ramais: updated.favoritos_ramais || [] });
     } catch (error) {
@@ -265,7 +280,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { slug } = req.params;
       const limit = Math.max(1, Math.min(50, Number((req.query.limit as string) || 5)));
-      const setor = await storage.getSetorBySlug(slug);
+      const num = Number(slug);
+      const setor = !Number.isNaN(num) && Number.isFinite(num)
+        ? await storage.getSetorById(num)
+        : await storage.getSetorBySlug(slug);
       if (!setor) return res.status(404).json({ error: "Setor não encontrado" });
       const map = setor.acessos_ramais || {};
       const list = Object.entries(map)

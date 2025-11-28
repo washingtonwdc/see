@@ -231,7 +231,7 @@ export default function SetoresList() {
       setIsCreating(false);
       // refresh lists
       queryClient.invalidateQueries({ queryKey: ["/api/setores"] });
-      navigate(`/setor/${newSetor.slug}`);
+      navigate(`/setor/${newSetor.id}`);
     },
     onError: (e: Error) => {
       toast({ title: "Falha ao criar setor", description: e.message, variant: "destructive" });
