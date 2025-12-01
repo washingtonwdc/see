@@ -39,7 +39,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const isMasterAllowed = (req: Request): boolean => {
     const now = Date.now();
     if (now < masterUnlockUntil) return true;
-    const masterPwd = (process.env.MASTER_PASSWORD || "080808").trim();
+    const masterPwdEnv = String(process.env.MASTER_PASSWORD || "").trim();
+    const masterPwd = (masterPwdEnv || "080808").trim();
+    const isProd = String(process.env.NODE_ENV || app.get("env") || "development") !== "development";
+    if (isProd && (!masterPwdEnv || masterPwdEnv === "080808")) {
+      return false;
+    }
     const candidate = String(
       (req.headers["x-master-password"] ||
         (req.body && (req.body as any).master_password) ||
@@ -90,6 +95,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/setores", async (req, res) => {
     try {
       const { query, bloco, andar } = req.query;
+      const pagedParam = String((req.query.paged as string) || "").toLowerCase();
+      const isPaged = ["1","true","yes"].includes(pagedParam);
+      const page = Math.max(1, Number((req.query.page as string) || 1));
+      const pageSize = Math.max(1, Math.min(200, Number((req.query.pageSize as string) || 50)));
 
       if (query || bloco || andar) {
         // Search with filters
@@ -99,13 +108,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           andar as string
         );
         const allowed = isMasterAllowed(req);
-        return res.json(allowed ? results : results.map(sanitizeSetorPublic));
+        const finalList = allowed ? results : results.map(sanitizeSetorPublic);
+        if (isPaged) {
+          const total = finalList.length;
+          const start = (page - 1) * pageSize;
+          const items = finalList.slice(start, start + pageSize);
+          return res.json({ items, total, page, pageSize });
+        }
+        return res.json(finalList);
       }
 
       // Get all setores
       const setores = await storage.getAllSetores();
       const allowed = isMasterAllowed(req);
-      res.json(allowed ? setores : setores.map(sanitizeSetorPublic));
+      const finalList = allowed ? setores : setores.map(sanitizeSetorPublic);
+      if (isPaged) {
+        const total = finalList.length;
+        const start = (page - 1) * pageSize;
+        const items = finalList.slice(start, start + pageSize);
+        return res.json({ items, total, page, pageSize });
+      }
+      res.json(finalList);
     } catch (error) {
       console.error("Error fetching setores:", error);
       res.status(500).json({ error: "Failed to fetch setores" });
@@ -124,6 +147,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Falha ao obter versão" });
+    }
+  });
+
+  app.get("/healthz", async (_req: Request, res: Response) => {
+    try {
+      res.status(200).send("ok");
+    } catch {
+      res.status(500).send("fail");
+    }
+  });
+
+  app.get("/readyz", async (_req: Request, res: Response) => {
+    try {
+      const stats = await storage.getStatistics();
+      const assetsDir = String(process.env.ASSETS_DIR || path.join(process.cwd(), "attached_assets"));
+      let writable = false;
+      try {
+        if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, { recursive: true });
+        const testPath = path.join(assetsDir, ".__write_test_readyz");
+        fs.writeFileSync(testPath, "ok", "utf-8");
+        fs.rmSync(testPath, { force: true });
+        writable = true;
+      } catch {}
+      const ready = writable && Number.isFinite(stats.totalSetores);
+      res.json({ ready, writable, totalSetores: stats.totalSetores });
+    } catch {
+      res.status(503).json({ ready: false });
     }
   });
 
@@ -411,18 +461,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const modeParam = (req.query.mode as string) || "replace";
       const mode = modeParam === "merge" ? "merge" : "replace";
+      const persistParam = String((req.query.persist as string) || "").toLowerCase();
+      const shouldPersist = ["1","true","yes"].includes(persistParam);
       if (!body) {
         return res.status(400).json({ error: "Missing request body" });
       }
       if (Array.isArray(body)) {
-        // Attempt to detect raw shape (with nested 'setor' key)
-        if (body.length > 0 && typeof body[0] === "object" && body[0] && (body[0] as any).setor) {
-          storage.importFromRaw(body as any[], mode);
+        const normalizePhones = (arr: any) =>
+          Array.isArray(arr)
+            ? arr.map((t: any) => (typeof t === "string" ? { numero: t } : {
+                numero: String(t?.numero || "").trim(),
+                link: t?.link ? String(t.link).trim() : "",
+                ramal_original: t?.ramal_original ? String(t.ramal_original).trim() : "",
+              })).filter((t: any) => t.numero)
+            : undefined;
+        const normalizedBody = body.map((it: any) => {
+          if (it && (it as any).setor) return it;
+          return {
+            ...it,
+            telefones: normalizePhones((it as any).telefones) || [],
+            telefones_externos: normalizePhones((it as any).telefones_externos) || [],
+          };
+        });
+        if (normalizedBody.length > 0 && typeof normalizedBody[0] === "object" && normalizedBody[0] && (normalizedBody[0] as any).setor) {
+          storage.importFromRaw(normalizedBody as any[], mode);
         } else {
-          storage.importFromNormalized(body as any[], mode);
+          storage.importFromNormalized(normalizedBody as any[], mode);
         }
+        if (shouldPersist) storage.persistAllToOverrides();
         const stats = await storage.getStatistics();
-        return res.json({ ok: true, mode, count: (await storage.getAllSetores()).length, stats });
+        return res.json({ ok: true, mode, persisted: shouldPersist, count: (await storage.getAllSetores()).length, stats });
       }
       return res.status(400).json({ error: "Body must be an array of setores" });
     } catch (error) {
@@ -439,6 +507,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const modeParam = (req.query.mode as string) || "replace";
       const mode = modeParam === "merge" ? "merge" : "replace";
+      const persistParam = String((req.query.persist as string) || "").toLowerCase();
+      const shouldPersist = ["1","true","yes"].includes(persistParam);
       const rawBuf = (req as any).rawBody as Buffer | Uint8Array | string | undefined;
       if (!rawBuf) {
         return res.status(400).json({ error: "Missing CSV body" });
@@ -489,8 +559,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ramal_principal: get("ramal_principal"),
           responsaveis: parseList("responsaveis").map(n => ({ nome: n })),
           ramais: parseList("ramais"),
-          telefones: parseList("telefones"),
-          telefones_externos: parseList("telefones_externos"),
+          telefones: parseList("telefones").map(n => ({ numero: n })),
+          telefones_externos: parseList("telefones_externos").map(n => ({ numero: n })),
           celular: get("celular"),
           whatsapp: get("whatsapp"),
           observacoes: get("observacoes"),
@@ -499,8 +569,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return setor;
       });
       storage.importFromNormalized(setores as any[], mode);
+      if (shouldPersist) storage.persistAllToOverrides();
       const stats = await storage.getStatistics();
-      return res.json({ ok: true, mode, count: (await storage.getAllSetores()).length, stats });
+      return res.json({ ok: true, mode, persisted: shouldPersist, count: (await storage.getAllSetores()).length, stats });
     } catch (error) {
       console.error("Error importing setores CSV:", error);
       res.status(500).json({ error: "Failed to import setores CSV" });

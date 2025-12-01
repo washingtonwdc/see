@@ -1,12 +1,21 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import tailwindcss from "tailwindcss";
+import autoprefixer from "autoprefixer";
 
 
 export default defineConfig({
   plugins: [
     react(),
   ],
+  logLevel: "error",
+  css: {
+    postcss: {
+      plugins: [tailwindcss(), autoprefixer()],
+      from: undefined,
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

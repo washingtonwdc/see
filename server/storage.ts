@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, rmSync } from "fs";
 import { join } from "path";
 import type { Setor, Statistics } from "@shared/schema";
 
@@ -258,6 +258,16 @@ export class MemStorage implements IStorage {
       andarNormalized = andarNormalized.replace(/\s*º?\s*ANDAR/i, "").trim();
     }
 
+    const toPhones = (arr: any) => {
+      const list = Array.isArray(arr) ? arr : [];
+      return list.map((t: any) => {
+        if (typeof t === "string") return { numero: t };
+        const numero = String(t?.numero || "").trim();
+        const link = t?.link ? String(t.link).trim() : "";
+        const ro = t?.ramal_original ? String(t.ramal_original).trim() : "";
+        return { numero, link, ramal_original: ro };
+      }).filter((t: any) => t.numero);
+    };
     return {
       id: item.id,
       sigla: item.setor?.sigla,
@@ -269,8 +279,8 @@ export class MemStorage implements IStorage {
       slug: item.setor?.slug,
       ramal_principal: item.setor?.ramal_principal || "",
       ramais: item.setor?.ramais || [],
-      telefones: item.setor?.telefones || [],
-      telefones_externos: item.setor?.telefones_externos || [],
+      telefones: toPhones(item.setor?.telefones),
+      telefones_externos: toPhones(item.setor?.telefones_externos),
       responsaveis: item.responsaveis || [],
       celular: item.contatos?.celular || "",
       whatsapp: item.contatos?.whatsapp || "",
@@ -615,8 +625,57 @@ export class MemStorage implements IStorage {
       const ts = new Date().toISOString().replace(/[:.]/g, "-");
       const backupName = join(this.backupsDir, `setores_overrides-${ts}.json`);
       writeFileSync(backupName, payload, "utf-8");
+      try {
+        const maxCount = Math.max(1, Number(process.env.SETORES_BACKUPS_MAX || "20"));
+        const retentionDays = Math.max(0, Number(process.env.SETORES_BACKUPS_RETENTION_DAYS || "0"));
+        const files = readdirSync(this.backupsDir)
+          .filter((f) => f.endsWith(".json"))
+          .map((f) => ({ f, m: statSync(join(this.backupsDir, f)).mtimeMs }))
+          .sort((a, b) => b.m - a.m);
+        if (retentionDays > 0) {
+          const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+          files.filter((x) => x.m < cutoff).forEach((x) => {
+            try { rmSync(join(this.backupsDir, x.f), { force: true }); } catch {}
+          });
+        }
+        const refreshed = readdirSync(this.backupsDir)
+          .filter((f) => f.endsWith(".json"))
+          .map((f) => ({ f, m: statSync(join(this.backupsDir, f)).mtimeMs }))
+          .sort((a, b) => b.m - a.m);
+        if (refreshed.length > maxCount) {
+          refreshed.slice(maxCount).forEach((x) => {
+            try { rmSync(join(this.backupsDir, x.f), { force: true }); } catch {}
+          });
+        }
+      } catch {}
     } catch (e) {
       console.warn("⚠️ Failed to write overrides/backup:", e);
+    }
+  }
+
+  persistAllToOverrides() {
+    try {
+      const overrides = Array.from(this.setores.values()).map((s) => ({
+        slug: s.slug,
+        sigla: s.sigla,
+        nome: s.nome,
+        bloco: s.bloco,
+        andar: s.andar,
+        observacoes: s.observacoes,
+        email: s.email,
+        ramal_principal: s.ramal_principal,
+        ramais: s.ramais,
+        telefones: s.telefones,
+        telefones_externos: s.telefones_externos,
+        celular: s.celular,
+        whatsapp: s.whatsapp,
+        outros_contatos: s.outros_contatos,
+        favoritos_ramais: s.favoritos_ramais,
+        acessos_ramais: s.acessos_ramais,
+      }));
+      this.persistOverrides(overrides);
+    } catch (e) {
+      console.warn("⚠️ Failed to persist all overrides:", e);
     }
   }
 
