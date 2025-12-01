@@ -2011,7 +2011,7 @@
     "nome": "1° COMISSÃO DE PROCESSO ADMINISTRATIVO DISCIPLINAR",
     "bloco": "A",
     "andar": "1",
-    "observacoes": ""
+    "observacoes": "smoke-1764615518315"
   },
   {
     "slug": "iicpad",
@@ -4894,6 +4894,39 @@
     "telefones_externos": [
       {
         "numero": "(61) 6666-0000"
+      }
+    ],
+    "responsaveis": [],
+    "celular": "",
+    "whatsapp": "",
+    "outros_contatos": [],
+    "favoritos_ramais": [],
+    "acessos_ramais": {}
+  },
+  {
+    "slug": "setor-teste2-1764599563026",
+    "sigla": "TEST2",
+    "nome": "Setor Teste 2",
+    "bloco": "Z",
+    "andar": "98",
+    "observacoes": "",
+    "email": "test2@example.com",
+    "ramal_principal": "",
+    "ramais": [
+      "998"
+    ],
+    "telefones": [
+      {
+        "numero": "(61) 7777-0000",
+        "link": "",
+        "ramal_original": ""
+      }
+    ],
+    "telefones_externos": [
+      {
+        "numero": "(61) 6666-0000",
+        "link": "",
+        "ramal_original": ""
       }
     ],
     "responsaveis": [],
